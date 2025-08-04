@@ -6,6 +6,10 @@ This repository provides an interactive web-based tool to help users register an
 
 Setting up SSO integration between Onspring and Microsoft Entra ID typically requires manual configuration through the Azure portal, involving multiple steps and technical knowledge of SAML configuration. This tool automates the entire process, making it accessible to users who may not be familiar with the intricacies of SAML setup.
 
+## Demo
+
+https://share.stevanfreeborn.com/onx-entra-id-sso-helper/example.mp4
+
 ## What This Tool Does
 
 The application performs the following automated steps:
