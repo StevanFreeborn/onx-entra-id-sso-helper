@@ -802,20 +802,9 @@
         effect();
       }
 
-      function createComputed(getter) {
-        const result = createReactive({ value: undefined });
-
-        createEffect(() => {
-          result.value = getter();
-        });
-
-        return result;
-      }
-
       return {
         createReactive,
         createEffect,
-        createComputed,
       }
     }
   </script>
