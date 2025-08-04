@@ -1,0 +1,824 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Onspring Entra ID SSO Helper</title>
+
+  <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+
+  <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@4.18.0/lib/msal-browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@microsoft/microsoft-graph-client/lib/graph-js-sdk.js"></script>
+  <script
+    src="https://cdn.jsdelivr.net/npm/@microsoft/microsoft-graph-client/lib/graph-client-msalBrowserAuthProvider.js"></script>
+
+  <style>
+    /* css reset */
+    * {
+      margin: 0;
+      padding: 0;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    button {
+      cursor: pointer;
+      font-family: inherit;
+      font-size: inherit;
+    }
+
+    a {
+      text-decoration: none;
+      color: inherit;
+    }
+
+    ul {
+      list-style-type: none;
+    }
+
+
+    /* styles */
+
+    :root {
+      font-size: 16px;
+      font-family: Arial, Helvetica, sans-serif;
+      --bg-color: #ffffff;
+      --text-color: #000000;
+      --border-color: #ddd;
+      --table-header-bg: #f2f2f2;
+      --input-bg: #ffffff;
+      --input-border: #ccc;
+      --input-focus-border: #0078d4;
+      --disabled-bg: #f8f8f8;
+      --highlight-bg: yellow;
+      --code-bg: #f8f8f8;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-color: #1a1a1a;
+        --text-color: #ffffff;
+        --border-color: #444;
+        --table-header-bg: #333;
+        --input-bg: #2d2d2d;
+        --input-border: #555;
+        --input-focus-border: #4dabf7;
+        --disabled-bg: #2a2a2a;
+        --highlight-bg: #b8860b;
+        --code-bg: #2a2a2a;
+      }
+    }
+
+    body {
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    .instructions {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .signin-container {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    #signInButton {
+      display: inline;
+    }
+
+    #name {
+      font-weight: bold;
+    }
+
+    ol {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      padding-left: 2rem;
+    }
+
+    .check-mark-container {
+      display: flex;
+      align-items: flex-end;
+      gap: 0.5rem;
+
+      svg {
+        width: 24px;
+        height: 24px;
+        fill: green;
+        opacity: 0;
+        transition: opacity 0.5s ease;
+      }
+
+      svg.visible {
+        opacity: 1;
+      }
+    }
+
+    .step-one-container {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .table-container {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      padding: 0.5rem;
+      text-align: left;
+      border: 1px solid var(--border-color);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    th {
+      background-color: var(--table-header-bg);
+      font-weight: bold;
+    }
+
+    #configureAppForm {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    label {
+      font-weight: bold;
+    }
+
+    input[type="text"] {
+      padding: 0.5rem;
+      border: 1px solid var(--input-border);
+      border-radius: 4px;
+      max-width: 400px;
+      background-color: var(--input-bg);
+      color: var(--text-color);
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--input-focus-border);
+      outline: none;
+    }
+
+    input[type="text"]:disabled {
+      background-color: var(--disabled-bg);
+      cursor: not-allowed;
+    }
+
+    button {
+      width: fit-content;
+      padding: 0.5rem 1rem;
+      background-color: #0078d4;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+
+    #configureAppButton {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .spinner {
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #3498db;
+      border-radius: 50%;
+      width: 16px;
+      height: 16px;
+      animation: spin 1s linear infinite;
+      display: inline-block;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    #appMetadataContainer {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    #appMetadataLink {
+      color: #0078d4;
+      text-decoration: underline;
+    }
+
+    #appCertContainer {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    #singleSignOnUrl {
+      display: block;
+      margin-top: 0.5rem;
+      font-family: monospace;
+      word-break: break-all;
+      background-color: var(--code-bg);
+      color: var(--text-color);
+      padding: 0.5rem;
+      border-radius: 0.25rem;
+    }
+
+    #appCert {
+      white-space: pre-wrap;
+      word-break: break-all;
+      background-color: var(--code-bg);
+      color: var(--text-color);
+      padding: 0.5rem;
+      border-radius: 0.25rem;
+      overflow-x: auto;
+    }
+
+    .highlight {
+      background-color: var(--highlight-bg);
+      color: #1a1a1a;
+      padding: 0.125rem 0.25rem;
+      border-radius: 0.25rem;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="instructions">
+    <h1>Instructions</h1>
+    <p>This is a tool to help programmatically setup an <strong>Enterprise Application</strong> in <strong>Microsoft
+        Entra ID</strong>that you can then use with <strong>Onspring</strong>'s Single Sign-On (SSO) integration.</p>
+    <p>You will need to first authentication yourself with your Microsoft credentials by clicking the <strong>Sign
+        In</strong> button below. Once you've authenticated and consented to the necessary permissions you will be
+      prompted for the necessary information to configure the app. Once this information is entered click on the
+      <strong>Configure App</strong> button and the following steps will be performed:
+    </p>
+    <div>
+      <ol>
+        <li>
+          <div class="step-one-container">
+            <p class="check-mark-container">
+              Create a new instance of the custom app template.
+              <svg id="checkmark-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
+                <path
+                  d="M160 96C124.7 96 96 124.7 96 160L96 480C96 515.3 124.7 544 160 544L480 544C515.3 544 544 515.3 544 480L544 160C544 124.7 515.3 96 480 96L160 96zM404.4 276.7L324.4 404.7C320.2 411.4 313 415.6 305.1 416C297.2 416.4 289.6 412.8 284.9 406.4L236.9 342.4C228.9 331.8 231.1 316.8 241.7 308.8C252.3 300.8 267.3 303 275.3 313.6L302.3 349.6L363.7 251.3C370.7 240.1 385.5 236.6 396.8 243.7C408.1 250.8 411.5 265.5 404.4 276.8z" />
+              </svg>
+            </p>
+            <p><strong class="highlight">Note:</strong> This will include the following default claims mapping which
+              should satisfy the required claims of
+              Onspring's SSO integration. You can always customize these mappings later within the Azure portal.</p>
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Claim Name</th>
+                    <th>Claim Value Source</th>
+                    <th>Satisfies Onspring Claim</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Unique User Identifier (Name Id)</td>
+                    <td>user.userprincipalname</td>
+                    <td>NameID</td>
+                  </tr>
+                  <tr>
+                    <td>http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress</td>
+                    <td>user.mail</td>
+                    <td>Email</td>
+                  </tr>
+                  <tr>
+                    <td>http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname</td>
+                    <td>user.givenname</td>
+                    <td>FirstName</td>
+                  </tr>
+                  <tr>
+                    <td>http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname</td>
+                    <td>user.surname</td>
+                    <td>LastName</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </li>
+        <li>
+          <p class="check-mark-container">
+            Update the app to use SAML as the preferred Single Sign-On mode.
+            <svg id="checkmark-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
+              <path
+                d="M160 96C124.7 96 96 124.7 96 160L96 480C96 515.3 124.7 544 160 544L480 544C515.3 544 544 515.3 544 480L544 160C544 124.7 515.3 96 480 96L160 96zM404.4 276.7L324.4 404.7C320.2 411.4 313 415.6 305.1 416C297.2 416.4 289.6 412.8 284.9 406.4L236.9 342.4C228.9 331.8 231.1 316.8 241.7 308.8C252.3 300.8 267.3 303 275.3 313.6L302.3 349.6L363.7 251.3C370.7 240.1 385.5 236.6 396.8 243.7C408.1 250.8 411.5 265.5 404.4 276.8z" />
+            </svg>
+          </p>
+        </li>
+        <li>
+          <p class="check-mark-container">
+            Set the Identifier and Reply URL to correct values based on given Instance URL.
+            <svg id="checkmark-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
+              <path
+                d="M160 96C124.7 96 96 124.7 96 160L96 480C96 515.3 124.7 544 160 544L480 544C515.3 544 544 515.3 544 480L544 160C544 124.7 515.3 96 480 96L160 96zM404.4 276.7L324.4 404.7C320.2 411.4 313 415.6 305.1 416C297.2 416.4 289.6 412.8 284.9 406.4L236.9 342.4C228.9 331.8 231.1 316.8 241.7 308.8C252.3 300.8 267.3 303 275.3 313.6L302.3 349.6L363.7 251.3C370.7 240.1 385.5 236.6 396.8 243.7C408.1 250.8 411.5 265.5 404.4 276.8z" />
+            </svg>
+          </p>
+        </li>
+        <li>
+          <p class="check-mark-container">
+            Create a new signing certificate for the app.
+            <svg id="checkmark-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
+              <path
+                d="M160 96C124.7 96 96 124.7 96 160L96 480C96 515.3 124.7 544 160 544L480 544C515.3 544 544 515.3 544 480L544 160C544 124.7 515.3 96 480 96L160 96zM404.4 276.7L324.4 404.7C320.2 411.4 313 415.6 305.1 416C297.2 416.4 289.6 412.8 284.9 406.4L236.9 342.4C228.9 331.8 231.1 316.8 241.7 308.8C252.3 300.8 267.3 303 275.3 313.6L302.3 349.6L363.7 251.3C370.7 240.1 385.5 236.6 396.8 243.7C408.1 250.8 411.5 265.5 404.4 276.8z" />
+            </svg>
+          </p>
+        </li>
+        <li>
+          <p class="check-mark-container">
+            Retrieve app metadata necessary for completing the SSO integration with Onspring support.
+            <svg id="checkmark-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
+              <path
+                d="M160 96C124.7 96 96 124.7 96 160L96 480C96 515.3 124.7 544 160 544L480 544C515.3 544 544 515.3 544 480L544 160C544 124.7 515.3 96 480 96L160 96zM404.4 276.7L324.4 404.7C320.2 411.4 313 415.6 305.1 416C297.2 416.4 289.6 412.8 284.9 406.4L236.9 342.4C228.9 331.8 231.1 316.8 241.7 308.8C252.3 300.8 267.3 303 275.3 313.6L302.3 349.6L363.7 251.3C370.7 240.1 385.5 236.6 396.8 243.7C408.1 250.8 411.5 265.5 404.4 276.8z" />
+            </svg>
+          </p>
+        </li>
+      </ol>
+    </div>
+    <p>
+      <strong class="highlight">Note:</strong> If you don't see a pop-up after clicking <strong>Sign In</strong> make
+      sure you've allowed pop-ups for this domain in your browser
+    </p>
+    <div class="signin-container">
+      <button type="button" id="signInButton" disabled="true">Sign In</button>
+      <p id="nameContainer" class="hidden">Signed in as <span id="name"></span></p>
+    </div>
+  </div>
+
+
+  <form id="configureAppForm" class="hidden">
+    <h2>Configure App</h2>
+    <p>Enter the name of the app as you want it to appear in the Azure portal and the instance URL for your Onspring
+      account
+    <div class="form-group">
+      <label for="appName">App Name</label>
+      <input type="text" name="appName" id="appName" required>
+    </div>
+    <div class="form-group">
+      <label for="instanceUrl">Instance URL</label>
+      <input type="text" name="instanceUrl" id="instanceUrl" required>
+    </div>
+    <button type="submit" id="configureAppButton" disabled="true">
+      Configure App
+      <span class="spinner hidden"></span>
+    </button>
+  </form>
+
+  <div id="appMetadataContainer">
+    <h2>App Metadata</h2>
+    <p>The app has been successfully configured for SSO with Onspring. You can now provide the following
+      information to Onspring support to complete the SSO integration. Note you will need to assign any users or groups
+      to the app in the Azure portal who will be testing or using the SSO integration.</p>
+    <a href="#" id="appMetadataLink" target="_blank">View App Metadata</a>
+    <code id="singleSignOnUrl"></code>
+    <div id="appCertContainer">
+      <pre id="appCert"></pre>
+    </div>
+  </div>
+
+  <script type="module">
+    /* initialize msal */
+
+    const config = {
+      auth: {
+        clientId: "0a96f66c-6aa8-4214-acdf-821eaa524f8a",
+        authority: "https://login.microsoftonline.com/common",
+        redirectUri: window.location.origin,
+      }
+    };
+
+    const msalInstance = new msal.PublicClientApplication(config);
+    await msalInstance.initialize();
+
+    /* state */
+
+    const { createReactive, createEffect } = setupStateManagement();
+    const state = createReactive({
+      isSubmitting: false,
+      account: undefined,
+      graphClient: undefined,
+      appName: '',
+      instanceUrl: '',
+      application: undefined,
+      servicePrincipal: undefined,
+      signingCertificateKey: '',
+      singleSignOnUrl: '',
+    });
+
+    /* effects */
+
+    createEffect(() => {
+      const configureAppForm = document.getElementById('configureAppForm');
+      const signInButton = document.getElementById('signInButton');
+      const nameContainer = document.getElementById('nameContainer');
+
+      if (!state.account) {
+        configureAppForm.classList.add('hidden');
+        nameContainer.classList.add('hidden');
+        signInButton.removeAttribute('disabled');
+        return;
+      }
+
+      document.getElementById('name').textContent = state.account.name;
+      configureAppForm.classList.remove('hidden');
+      nameContainer.classList.remove('hidden');
+      signInButton.setAttribute('disabled', 'true');
+    });
+
+    createEffect(() => {
+      const configureButton = document.getElementById('configureAppButton');
+      if (!state.appName.trim() || !state.instanceUrl.trim()) {
+        console.log('App Name or Instance URL is empty');
+        configureButton.setAttribute('disabled', 'true');
+        return;
+      }
+
+      configureButton.removeAttribute('disabled');
+    });
+
+    createEffect(() => {
+      const appMetadataLink = document.getElementById('appMetadataLink');
+
+      if (!state.application || !state.account) {
+        return;
+      }
+
+      appMetadataLink.setAttribute('href', `https://login.microsoftonline.com/${state.account.tenantId}/federationmetadata/2007-06/federationmetadata.xml?appid=${state.application.appId}`);
+    })
+
+    createEffect(() => {
+      const appCert = document.getElementById('appCert');
+      const singleSignOnUrl = document.getElementById('singleSignOnUrl');
+
+      if (!state.signingCertificateKey || !state.singleSignOnUrl) {
+        appCert.textContent = '';
+        singleSignOnUrl.textContent = '';
+        return;
+      }
+
+      appCert.textContent = state.signingCertificateKey;
+      singleSignOnUrl.textContent = state.singleSignOnUrl;
+    });
+
+    createEffect(() => {
+      const appMetadataContainer = document.getElementById('appMetadataContainer');
+
+      if (!state.application || !state.servicePrincipal || !state.signingCertificateKey || !state.singleSignOnUrl) {
+        appMetadataContainer.classList.add('hidden');
+        return;
+      }
+
+      appMetadataContainer.classList.remove('hidden');
+    });
+
+    createEffect(() => {
+      const form = document.getElementById('configureAppForm');
+      const configureAppButton = document.getElementById('configureAppButton');
+      const nameInput = document.getElementById('appName');
+      const instanceUrlInput = document.getElementById('instanceUrl');
+      const spinner = configureAppButton.querySelector('.spinner');
+
+      if (state.isSubmitting) {
+        configureAppButton.setAttribute('disabled', 'true');
+        nameInput.setAttribute('disabled', 'true');
+        instanceUrlInput.setAttribute('disabled', 'true');
+        spinner.classList.remove('hidden');
+      } else {
+        nameInput.removeAttribute('disabled');
+        instanceUrlInput.removeAttribute('disabled');
+        spinner.classList.add('hidden');
+        form.reset();
+        hideAllCheckMarks();
+      }
+    })
+
+    /* add event handlers */
+
+    document.getElementById('signInButton').addEventListener('click', handleSignInButtonClick);
+
+    document.getElementById('configureAppForm').addEventListener('submit', handleConfigureAppFormSubmit);
+
+    document.getElementById('appName').addEventListener('input', handleAppNameInput);
+
+    document.getElementById('instanceUrl').addEventListener('input', handleInstanceUrlInput);
+
+    /* event handlers */
+
+    async function handleSignInButtonClick() {
+      try {
+        const scopes = [
+          'Application.ReadWrite.All',
+        ];
+
+        if (!state.account) {
+          const res = await msalInstance.loginPopup({ scopes });
+          state.account = res.account;
+        }
+
+        const authProvider = new MSGraphAuthCodeMSALBrowserAuthProvider.AuthCodeMSALBrowserAuthenticationProvider(msalInstance, {
+          account: state.account,
+          scopes,
+          interactionType: msal.InteractionType.Popup,
+        });
+
+        state.graphClient = MicrosoftGraph.Client.initWithMiddleware({ authProvider });
+      } catch (error) {
+        alert(`Failed to sign in: ${error.message}`);
+        console.error(error);
+      }
+    }
+
+    async function handleConfigureAppFormSubmit(e) {
+      e.preventDefault();
+
+      try {
+        state.isSubmitting = true;
+        await checkUrlResolution(state.instanceUrl);
+        await createApp();
+        await updateAppToUseSAML();
+        await updateAppsUris();
+        await createSigningCertificate();
+      } catch (error) {
+        alert(`Failed to configure app: ${error.message}`);
+        console.error(error);
+      } finally {
+        state.isSubmitting = false;
+      }
+    }
+
+    function handleAppNameInput(e) {
+      state.appName = e.target.value;
+    }
+
+    function handleInstanceUrlInput(e) {
+      state.instanceUrl = e.target.value;
+    }
+
+    /* progress functions */
+
+    function showCheckMark(step) {
+      const checkmark = document.getElementById(`checkmark-${step}`);
+      if (checkmark) {
+        checkmark.classList.add('visible');
+      }
+    }
+
+    function hideAllCheckMarks() {
+      for (let i = 1; i <= 5; i++) {
+        const checkmark = document.getElementById(`checkmark-${i}`);
+        if (checkmark) {
+          checkmark.classList.remove('visible');
+        }
+      }
+    }
+
+    /* graph methods */
+
+    async function createApp() {
+      const res = await state.graphClient
+        .api("/applicationTemplates/8adf8e6e-67b2-4cf2-a259-e3dc5476c621/instantiate")
+        .post({
+          displayName: state.appName,
+        });
+
+      state.application = res.application;
+      state.servicePrincipal = res.servicePrincipal;
+      showCheckMark(1);
+    }
+
+    async function waitForServicePrincipal() {
+      let servicePrincipal;
+
+      do {
+        try {
+          servicePrincipal = await state.graphClient.api(`/servicePrincipals/${state.servicePrincipal.id}`).get();
+        } catch { }
+        await delay(2000);
+      }
+      while (!servicePrincipal);
+    }
+
+    async function updateAppToUseSAML() {
+      await waitForServicePrincipal();
+
+      await state.graphClient
+        .api(`/servicePrincipals/${state.servicePrincipal.id}`)
+        .update({
+          preferredSingleSignOnMode: "saml"
+        });
+
+      showCheckMark(2);
+    }
+
+    async function updateAppsUris() {
+      const baseUrl = state.instanceUrl
+        .replace(/^(https?:\/\/)?/, 'https://')
+        .replace(/\/+$/, '');
+
+      await state.graphClient
+        .api(`/applications/${state.application.id}`)
+        .update({
+          identifierUris: [baseUrl],
+          web: {
+            redirectUris: [
+              `${baseUrl}/Public/FederatedLoginCallback`
+            ]
+          }
+        });
+
+      showCheckMark(3);
+    }
+
+    async function createSigningCertificate() {
+      const res = await state.graphClient
+        .api(`/servicePrincipals/${state.servicePrincipal.id}/addTokenSigningCertificate`)
+        .post({
+          displayName: `CN=${state.application.displayName}`,
+        });
+
+      showCheckMark(4);
+      await delay(500);
+      showCheckMark(5);
+      await delay(500);
+
+      state.signingCertificateKey = res.key;
+      state.singleSignOnUrl = `https://login.microsoftonline.com/${state.account.tenantId}/saml2`;
+    }
+
+    /* utility functions */
+
+    async function checkUrlResolution(url) {
+      try {
+        const response = await fetch(url, { method: 'HEAD', mode: 'no-cors' });
+        return response.ok;
+      } catch (error) {
+        console.error(error);
+        throw new Error(`Unable to resolve URL: ${url}`);
+      }
+    }
+
+    async function delay(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    /* state management */
+
+    function setupStateManagement() {
+      const effectStack = [];
+      const depsMap = new WeakMap();
+
+      function getActiveEffect() {
+        return effectStack[effectStack.length - 1];
+
+      }
+
+      function track(target, key) {
+        const activeEffect = getActiveEffect();
+
+        if (!activeEffect) {
+          return;
+        }
+
+        let targetDeps = depsMap.get(target);
+
+        if (!targetDeps) {
+          targetDeps = new Map();
+          depsMap.set(target, targetDeps);
+        }
+
+        let keyDeps = targetDeps.get(key);
+
+        if (!keyDeps) {
+          keyDeps = new Set();
+          targetDeps.set(key, keyDeps);
+        }
+
+        keyDeps.add(activeEffect);
+      }
+
+      function trigger(target, key) {
+        const activeEffect = getActiveEffect();
+        const targetDeps = depsMap.get(target);
+
+        if (!targetDeps) {
+          return;
+        }
+
+        const keyDeps = targetDeps.get(key);
+
+        if (!keyDeps) {
+          return;
+        }
+
+        const effectsToRun = [];
+
+        keyDeps.forEach(effect => {
+          if (effect === activeEffect) {
+            return;
+          }
+
+          effectsToRun.push(effect);
+        })
+
+        effectsToRun.forEach(effect => effect());
+      }
+
+      function createReactive(obj) {
+        return new Proxy(obj, {
+          get(target, key, receiver) {
+            track(target, key);
+            return Reflect.get(target, key, receiver);
+          },
+          set(target, key, value, receiver) {
+            const result = Reflect.set(target, key, value, receiver);
+            trigger(target, key);
+            return result;
+          },
+        });
+      }
+
+      function createEffect(fn) {
+        function effect() {
+          effectStack.push(effect);
+
+          try {
+            fn();
+          } finally {
+            effectStack.pop();
+          }
+        };
+
+        effect();
+      }
+
+      function createComputed(getter) {
+        const result = createReactive({ value: undefined });
+
+        createEffect(() => {
+          result.value = getter();
+        });
+
+        return result;
+      }
+
+      return {
+        createReactive,
+        createEffect,
+        createComputed,
+      }
+    }
+  </script>
+</body>
+
+</html>
